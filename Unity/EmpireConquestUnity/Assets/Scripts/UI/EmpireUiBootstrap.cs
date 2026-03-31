@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using EmpireConquest.Core;
 using EmpireConquest.Runtime;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -12,6 +14,10 @@ namespace EmpireConquest.UI
 
         private Text _status = null!;
         private InputField _searchInput = null!;
+        private GameObject _vipPopup = null!;
+        private RectTransform _vipContent = null!;
+        private Text _vipHeader = null!;
+        private bool _vipPackageTab = true;
 
         private void Start()
         {
@@ -60,9 +66,9 @@ namespace EmpireConquest.UI
             CreateButton(panel, "Clan War Battle", new Vector2(0, y), () => Set(runtime.ClanWarBattle(1600), "Clan War Battle"));
             y -= 50;
 
-            CreateButton(panel, "Buy VIP Silver", new Vector2(0, y), () => Set(runtime.BuyVipPackage("vip_silver"), "VIP Silver"));
+            CreateButton(panel, "VIP Hub", new Vector2(0, y), ToggleVipPopup);
             y -= 42;
-            CreateButton(panel, "Buy VIP Shop Item", new Vector2(0, y), () => Set(runtime.BuyVipShopItem("vip_elixir_crate"), "VIP Shop"));
+            CreateButton(panel, "Save Progress", new Vector2(0, y), () => { runtime.SaveNow(); Msg("Progress saved."); });
             y -= 50;
 
             _searchInput = CreateInput(panel, "Search player id/name", new Vector2(0, y));
@@ -71,6 +77,7 @@ namespace EmpireConquest.UI
             y -= 56;
 
             _status = CreateText(panel, "Status: ready", new Vector2(0, y), 15, TextAnchor.UpperLeft, new Vector2(320, 150));
+            BuildVipPopup(canvasGo.transform);
         }
 
         private void RaidSearchedPlayer()
@@ -98,6 +105,125 @@ namespace EmpireConquest.UI
 
         private void Set(bool ok, string action) => Msg(ok ? $"{action}: success" : $"{action}: failed");
         private void Msg(string m) { if (_status != null) _status.text = "Status: " + m; }
+
+        private void ToggleVipPopup()
+        {
+            if (_vipPopup == null) return;
+            var next = !_vipPopup.activeSelf;
+            _vipPopup.SetActive(next);
+            if (next)
+            {
+                RefreshVipPopup();
+            }
+        }
+
+        private void BuildVipPopup(Transform parent)
+        {
+            _vipPopup = new GameObject("VipPopup");
+            _vipPopup.transform.SetParent(parent, false);
+            var popupImage = _vipPopup.AddComponent<Image>();
+            popupImage.color = new Color(0.05f, 0.07f, 0.13f, 0.96f);
+            var popupRect = _vipPopup.GetComponent<RectTransform>();
+            popupRect.anchorMin = new Vector2(0.5f, 0.5f);
+            popupRect.anchorMax = new Vector2(0.5f, 0.5f);
+            popupRect.pivot = new Vector2(0.5f, 0.5f);
+            popupRect.sizeDelta = new Vector2(760, 560);
+
+            _vipHeader = CreateText(_vipPopup.transform, "VIP Hub", new Vector2(0, -24), 24, TextAnchor.MiddleCenter, new Vector2(720, 30));
+            _vipHeader.fontStyle = FontStyle.Bold;
+
+            CreateButton(_vipPopup.transform, "Packages", new Vector2(-180, -70), () =>
+            {
+                _vipPackageTab = true;
+                RefreshVipPopup();
+            });
+            CreateButton(_vipPopup.transform, "VIP Shop", new Vector2(0, -70), () =>
+            {
+                _vipPackageTab = false;
+                RefreshVipPopup();
+            });
+            CreateButton(_vipPopup.transform, "Close", new Vector2(180, -70), () => _vipPopup.SetActive(false));
+
+            var contentGo = new GameObject("VipContent");
+            contentGo.transform.SetParent(_vipPopup.transform, false);
+            _vipContent = contentGo.AddComponent<RectTransform>();
+            _vipContent.anchorMin = new Vector2(0.5f, 1f);
+            _vipContent.anchorMax = new Vector2(0.5f, 1f);
+            _vipContent.pivot = new Vector2(0.5f, 1f);
+            _vipContent.anchoredPosition = new Vector2(0, -130);
+            _vipContent.sizeDelta = new Vector2(700, 400);
+
+            _vipPopup.SetActive(false);
+        }
+
+        private void RefreshVipPopup()
+        {
+            if (_vipContent == null || runtime == null) return;
+            foreach (Transform child in _vipContent)
+            {
+                Destroy(child.gameObject);
+            }
+
+            var state = runtime.State;
+            state.Resources.TryGetValue(ResourceType.Gems, out var gems);
+            _vipHeader.text = $"VIP Hub  |  Level {state.Player.VipLevel}  |  Tokens {state.VipTokens}  |  Gems {gems:0}";
+            var y = -10f;
+
+            if (_vipPackageTab)
+            {
+                foreach (var pkg in runtime.GetVipPackages())
+                {
+                    CreateVipCard(
+                        $"{pkg.Name}  •  {pkg.CostGems} Gems",
+                        $"VIP +{pkg.VipPoints} | Build x{pkg.BuildingBoostMultiplier:0.00} | Train x{pkg.TrainingBoostMultiplier:0.00} | Heal x{pkg.HealingBoostMultiplier:0.00}",
+                        $"Buy {pkg.Name}",
+                        new Vector2(0, y),
+                        () => Set(runtime.BuyVipPackage(pkg.Id), pkg.Name));
+                    y -= 110;
+                }
+            }
+            else
+            {
+                foreach (var item in runtime.GetVipShopItems().OrderBy(x => x.RequiredVipLevel))
+                {
+                    CreateVipCard(
+                        $"{item.Name}  •  {item.CostVipTokens} VIP Tokens",
+                        $"Requires VIP {item.RequiredVipLevel} | Reward: {string.Join(", ", item.Reward.Select(r => $"{r.Key}+{r.Value}"))}",
+                        $"Buy {item.Name}",
+                        new Vector2(0, y),
+                        () => Set(runtime.BuyVipShopItem(item.Id), item.Name));
+                    y -= 110;
+                }
+            }
+        }
+
+        private void CreateVipCard(string title, string subtitle, string buttonText, Vector2 pos, Action onBuy)
+        {
+            var card = new GameObject("VipCard");
+            card.transform.SetParent(_vipContent, false);
+            var cardImg = card.AddComponent<Image>();
+            cardImg.color = new Color(0.1f, 0.14f, 0.24f, 0.95f);
+            var rt = card.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = new Vector2(680, 100);
+
+            var titleText = CreateText(card.transform, title, new Vector2(0, -8), 18, TextAnchor.UpperLeft, new Vector2(640, 28));
+            titleText.alignment = TextAnchor.UpperLeft;
+            titleText.color = new Color(1f, 0.9f, 0.6f);
+
+            var subtitleText = CreateText(card.transform, subtitle, new Vector2(0, -40), 14, TextAnchor.UpperLeft, new Vector2(640, 40));
+            subtitleText.alignment = TextAnchor.UpperLeft;
+
+            var buyButton = CreateButton(card.transform, buttonText, new Vector2(215, -58), () =>
+            {
+                onBuy();
+                RefreshVipPopup();
+            });
+            buyButton.GetComponent<Image>().color = new Color(0.86f, 0.55f, 0.18f, 0.98f);
+        }
 
         private static RectTransform CreatePanel(Transform parent, Vector2 anchored, Vector2 size, string title)
         {
