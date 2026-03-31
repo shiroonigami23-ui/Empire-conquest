@@ -132,6 +132,33 @@ namespace EmpireConquest.UnityRuntime
             var c = new Dictionary<ResourceType, int> { [ResourceType.Gold] = Mathf.Max(1, Mathf.RoundToInt((count * 5) / m)), [ResourceType.Mana] = Mathf.Max(1, Mathf.RoundToInt((count * 2) / m)) };
             if (!_r.Spend(c)) return false; _s.InjuredUnits[id] -= count; if (!_s.Units.ContainsKey(id)) _s.Units[id] = 0; _s.Units[id] += count; return true;
         }
+
+        public bool AssignDefensiveTroops(string id, int count)
+        {
+            if (!_s.Units.TryGetValue(id, out var available) || count <= 0 || available < count)
+            {
+                return false;
+            }
+            _s.Units[id] -= count;
+            if (!_s.DefensiveTroops.ContainsKey(id))
+            {
+                _s.DefensiveTroops[id] = 0;
+            }
+            _s.DefensiveTroops[id] += count;
+            return true;
+        }
+
+        public int CalculateDefensivePower()
+        {
+            var mul = 1f + (_s.Player.TroopResearchLevel * 0.07f);
+            var power = 0;
+            foreach (var u in _d)
+            {
+                _s.DefensiveTroops.TryGetValue(u.Id, out var c);
+                power += Mathf.RoundToInt((u.Stats.Hp + u.Stats.Defense + Mathf.RoundToInt(u.Stats.Attack * 0.6f)) * c * mul);
+            }
+            return power;
+        }
     }
 
     public class HeroService
@@ -215,7 +242,8 @@ namespace EmpireConquest.UnityRuntime
     public class EngagementService
     {
         private readonly GameState _s; private readonly ResourceService _r; private readonly CombatService _c;
-        public EngagementService(GameState s, ResourceService r, CombatService c) { _s = s; _r = r; _c = c; }
+        private readonly UnitService _u;
+        public EngagementService(GameState s, ResourceService r, UnitService u, CombatService c) { _s = s; _r = r; _u = u; _c = c; }
         public void Tick(float dt) => BoostHelper.Tick(_s, dt);
         public bool OpenChest(string id) { if (_s.OpenedChests.Contains(id)) return false; _s.OpenedChests.Add(id); _r.Add(new Dictionary<ResourceType, int> { [ResourceType.Gold] = UnityEngine.Random.Range(150, 450), [ResourceType.Wood] = UnityEngine.Random.Range(120, 300), [ResourceType.GuildCoins] = UnityEngine.Random.Range(4, 14), [ResourceType.ClanTokens] = UnityEngine.Random.Range(3, 10) }); _s.ActiveBoosts.Add(new ActiveBoost { Type = (BoostType)UnityEngine.Random.Range(0, 3), Multiplier = UnityEngine.Random.Range(1.25f, 1.6f), RemainingSeconds = UnityEngine.Random.Range(120f, 260f) }); return true; }
         public void ClaimRandomGift() => _r.Add(new Dictionary<ResourceType, int> { [ResourceType.Gold] = UnityEngine.Random.Range(100, 400), [ResourceType.Food] = UnityEngine.Random.Range(80, 250), [ResourceType.Gems] = UnityEngine.Random.Range(1, 6) });
@@ -226,5 +254,62 @@ namespace EmpireConquest.UnityRuntime
         public string ScoutBase(string id) { var b = _s.EnemyBases.FirstOrDefault(x => x.Id == id); if (b == null) return "Unknown base."; _s.LastScoutedBaseId = id; return $"{b.Name} scouted on {b.Map}. Estimated power {b.Power}."; }
         public void StartClanWar() { _s.ClanWar.Active = true; _s.ClanWar.ClanWarPoints = 0; _s.ClanWar.EnemyClanPoints = UnityEngine.Random.Range(30, 70); }
         public bool FightClanWarBattle(int p) { if (!_s.ClanWar.Active) return false; var win = _c.ResolveBattle(p); if (win) { _s.ClanWar.ClanWarPoints += UnityEngine.Random.Range(8, 18); _r.Add(new Dictionary<ResourceType, int> { [ResourceType.GuildCoins] = 6, [ResourceType.ClanTokens] = 6 }); } else _s.ClanWar.EnemyClanPoints += UnityEngine.Random.Range(6, 16); return win; }
+
+        public IReadOnlyList<PlayerBaseProfile> SearchPlayers(string query)
+        {
+            var q = (query ?? "").Trim().ToLowerInvariant();
+            return _s.PlayerPool
+                .Where(p => string.IsNullOrWhiteSpace(q) || p.Name.ToLowerInvariant().Contains(q) || p.Id.ToLowerInvariant().Contains(q))
+                .OrderBy(p => p.IsOnline)
+                .ThenByDescending(p => p.EstimatedPower)
+                .Take(10)
+                .ToList();
+        }
+
+        public bool AttackPlayerBase(string playerId, out string status)
+        {
+            var target = _s.PlayerPool.FirstOrDefault(p => p.Id == playerId);
+            if (target == null)
+            {
+                status = "Target not found.";
+                return false;
+            }
+            if (target.IsOnline)
+            {
+                status = "Target currently online. Search again.";
+                return false;
+            }
+
+            var defensivePower = target.DefensiveTroops.Values.Sum() * 45;
+            var enemyPower = Mathf.Max(200, target.EstimatedPower + defensivePower / 3);
+            var win = _c.ResolveBattle(enemyPower);
+            if (win)
+            {
+                _r.Add(new Dictionary<ResourceType, int> { [ResourceType.Gold] = 450, [ResourceType.Honor] = 18, [ResourceType.ClanTokens] = 4 });
+                status = "Raid won. Loot secured.";
+            }
+            else
+            {
+                status = "Raid failed.";
+            }
+            return win;
+        }
+
+        public bool DefendHomeBase(int enemyPower)
+        {
+            var defense = _u.CalculateDefensivePower() + (_s.Player.TownHallPower / 2);
+            var chance = Mathf.Clamp((float)defense / Mathf.Max(1, enemyPower) * 0.62f, 0.08f, 0.94f);
+            var win = UnityEngine.Random.value < chance;
+            if (win)
+            {
+                _s.DefendedAttacks++;
+                _r.Add(new Dictionary<ResourceType, int> { [ResourceType.Honor] = 8, [ResourceType.GuildCoins] = 3 });
+            }
+            else
+            {
+                _u.RegisterCasualties(0.08f);
+            }
+            return win;
+        }
     }
 }

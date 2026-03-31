@@ -7,7 +7,7 @@ namespace EmpireConquest.EditorTools
 {
     public static class BuildPipelineScript
     {
-        private const string ScenePath = "Assets/Scenes/EmpireBootstrap.unity";
+        private const string ScenePath = "Assets/Scenes/EmpireMain.unity";
 
         public static void BuildAndroidRelease()
         {
@@ -89,7 +89,7 @@ namespace EmpireConquest.EditorTools
         {
             if (!File.Exists(ScenePath))
             {
-                CreateEmpireBootstrapScene.CreateScene();
+                CreatePhase2Scenes.CreateAll();
             }
         }
     }

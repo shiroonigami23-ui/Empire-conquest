@@ -53,6 +53,11 @@ Empire Conquest is a real-time strategy project inspired by modern kingdom-build
 - World feel:
   - roaming NPC + pet companion in base scene
   - music director hooks for calm vs battle mode
+- Phase-2 scene flow:
+  - dedicated `EmpireMain`, `TrollMap`, and `ClanWar` scenes
+  - non-IMGUI runtime UI panel bootstrap (Unity UI)
+  - offline-only PvP raid rule with player search and bot player pool
+  - defensive troop assignment and home-base defense trigger
 - Unity compile check passes in batch mode.
 
 ## Run In Unity

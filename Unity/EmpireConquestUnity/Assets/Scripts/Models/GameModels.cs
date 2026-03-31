@@ -269,6 +269,16 @@ namespace EmpireConquest.Core
     }
 
     [Serializable]
+    public class PlayerBaseProfile
+    {
+        public string Id = "";
+        public string Name = "";
+        public int EstimatedPower;
+        public bool IsOnline;
+        public Dictionary<string, int> DefensiveTroops = new();
+    }
+
+    [Serializable]
     public class StoreDecoration
     {
         public string Id = "";
@@ -286,6 +296,7 @@ namespace EmpireConquest.Core
         public ProfileState Profile = new();
         public List<BuildingInstance> Buildings = new();
         public Dictionary<string, int> Units = new();
+        public Dictionary<string, int> DefensiveTroops = new();
         public Dictionary<string, int> InjuredUnits = new();
         public List<HeroInstance> Heroes = new();
         public HashSet<string> OwnedPets = new();
@@ -306,5 +317,7 @@ namespace EmpireConquest.Core
         public string LastScoutedBaseId = "";
         public ClanWarState ClanWar = new();
         public BuildingUpgradeTask ActiveBuildingUpgrade = new();
+        public List<PlayerBaseProfile> PlayerPool = new();
+        public int DefendedAttacks;
     }
 }

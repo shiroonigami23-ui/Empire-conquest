@@ -44,7 +44,7 @@ namespace EmpireConquest.Runtime
             _progression = new ProgressionService(State, _resources, _achievementDefs, _challengeDefs, _eventDefs);
             _store = new StoreService(State, _resources);
             _social = new SocialService(State);
-            _engagement = new EngagementService(State, _resources, _combat);
+            _engagement = new EngagementService(State, _resources, _units, _combat);
 
             _resources.RecalculateProduction(_buildingDefs);
             Debug.Log("EmpireGameRuntime initialized with expanded systems.");
@@ -84,6 +84,7 @@ namespace EmpireConquest.Runtime
         public bool UpgradeTownHall() => _buildings.UpgradeTownHall();
 
         public bool Train(string unitId, int count) => _units.Train(unitId, count);
+        public bool SetDefensiveTroops(string unitId, int count) => _units.AssignDefensiveTroops(unitId, count);
         public bool Heal(string unitId, int count) => _units.HealInHospital(unitId, count);
         public bool RecruitHero(string heroId) => _heroes.Recruit(heroId);
         public bool UpgradeHero(string heroId) => _heroes.UpgradeHero(heroId);
@@ -107,6 +108,9 @@ namespace EmpireConquest.Runtime
         public string ScoutEnemyBase(string baseId) => _engagement.ScoutBase(baseId);
         public void StartClanWar() => _engagement.StartClanWar();
         public bool ClanWarBattle(int enemyPower) => _engagement.FightClanWarBattle(enemyPower);
+        public IReadOnlyList<PlayerBaseProfile> SearchPlayers(string query) => _engagement.SearchPlayers(query);
+        public bool AttackPlayerBase(string playerId, out string status) => _engagement.AttackPlayerBase(playerId, out status);
+        public bool DefendHomeBase(int enemyPower) => _engagement.DefendHomeBase(enemyPower);
         public void UpdateProfile(string motto, string themeId) => _social.UpdateProfile(motto, themeId);
         public string VisitBase(string owner) => _social.VisitBase(owner);
         public IReadOnlyList<LeaderboardEntry> GetLeaderboard() => _social.GetLeaderboard();
@@ -156,6 +160,14 @@ namespace EmpireConquest.Runtime
             {
                 new() { Id = "troll_camp_alpha", Name = "Troll Camp Alpha", Map = "Whispering Hills", Power = 950, Reward = C(ResourceType.Gold, 550, ResourceType.EventTokens, 12) },
                 new() { Id = "troll_fort_beta", Name = "Troll Fort Beta", Map = "Ashen Ridge", Power = 1300, Reward = C(ResourceType.Gold, 900, ResourceType.GuildCoins, 14, ResourceType.ClanTokens, 10) }
+            };
+
+            State.PlayerPool = new List<PlayerBaseProfile>
+            {
+                new() { Id = "bot_001", Name = "RogueMiner", EstimatedPower = 780, IsOnline = false, DefensiveTroops = new Dictionary<string, int> { ["swordsman"] = 8, ["archer"] = 5 } },
+                new() { Id = "bot_002", Name = "IronWarden", EstimatedPower = 1220, IsOnline = false, DefensiveTroops = new Dictionary<string, int> { ["armored_soldier"] = 6, ["archer"] = 6 } },
+                new() { Id = "bot_003", Name = "LiveEagle", EstimatedPower = 1600, IsOnline = true, DefensiveTroops = new Dictionary<string, int> { ["cavalry"] = 5, ["catapult"] = 2 } },
+                new() { Id = "bot_004", Name = "NightScout", EstimatedPower = 930, IsOnline = false, DefensiveTroops = new Dictionary<string, int> { ["mercenary_scout"] = 9, ["swordsman"] = 4 } }
             };
         }
 

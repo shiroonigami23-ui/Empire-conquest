@@ -4,6 +4,15 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/EmpireMain.unity
+    guid: fa45161271d9a5441834a03c3e1ba104
+  - enabled: 1
+    path: Assets/Scenes/TrollMap.unity
+    guid: a661933e79968484d88ffc5e3b938bce
+  - enabled: 1
+    path: Assets/Scenes/ClanWar.unity
+    guid: 314dc5b2ad7dd254faa3811d1417d443
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0
