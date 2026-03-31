@@ -52,6 +52,10 @@ namespace EmpireConquest.Core
         public int MaxLandExpansionLevel = 6;
         public int MiningResearchLevel = 0;
         public int TroopResearchLevel = 0;
+        public int VipLevel = 0;
+        public int VipPoints = 0;
+        public int MaxVipLevel = 10;
+        public string ActiveVipPackageId = "";
     }
 
     [Serializable]
@@ -243,6 +247,29 @@ namespace EmpireConquest.Core
     }
 
     [Serializable]
+    public class VipPackageDefinition
+    {
+        public string Id = "";
+        public string Name = "";
+        public int CostGems = 0;
+        public int VipPoints = 100;
+        public float BuildingBoostMultiplier = 1f;
+        public float TrainingBoostMultiplier = 1f;
+        public float HealingBoostMultiplier = 1f;
+        public Dictionary<ResourceType, int> InstantReward = new();
+    }
+
+    [Serializable]
+    public class VipShopItem
+    {
+        public string Id = "";
+        public string Name = "";
+        public int RequiredVipLevel = 1;
+        public int CostVipTokens = 10;
+        public Dictionary<ResourceType, int> Reward = new();
+    }
+
+    [Serializable]
     public class ActiveBoost
     {
         public BoostType Type = BoostType.Building;
@@ -309,6 +336,9 @@ namespace EmpireConquest.Core
         public List<StoreDecoration> OwnedDecorations = new();
         public List<LeaderboardEntry> Leaderboard = new();
         public List<GuildShopItem> GuildShop = new();
+        public List<VipPackageDefinition> VipPackages = new();
+        public List<VipShopItem> VipShop = new();
+        public int VipTokens;
         public List<ActiveBoost> ActiveBoosts = new();
         public HashSet<string> OpenedChests = new();
         public int ClanCastleTroopDonations;

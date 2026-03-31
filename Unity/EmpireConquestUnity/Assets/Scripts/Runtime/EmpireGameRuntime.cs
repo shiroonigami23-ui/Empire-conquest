@@ -18,6 +18,7 @@ namespace EmpireConquest.Runtime
         private CombatService _combat = null!;
         private ProgressionService _progression = null!;
         private StoreService _store = null!;
+        private VipService _vip = null!;
         private SocialService _social = null!;
         private EngagementService _engagement = null!;
 
@@ -43,6 +44,7 @@ namespace EmpireConquest.Runtime
             _combat = new CombatService(_units, _heroes);
             _progression = new ProgressionService(State, _resources, _achievementDefs, _challengeDefs, _eventDefs);
             _store = new StoreService(State, _resources);
+            _vip = new VipService(State, _resources);
             _social = new SocialService(State);
             _engagement = new EngagementService(State, _resources, _units, _combat);
 
@@ -98,6 +100,8 @@ namespace EmpireConquest.Runtime
         public bool BuyBuilder() => _store.BuyBuilder();
         public bool UpgradeBuilder() => _store.UpgradeBuilder();
         public bool BuyGuildItem(string id) => _store.BuyGuildShopItem(id);
+        public bool BuyVipPackage(string packageId) => _vip.BuyVipPackage(packageId);
+        public bool BuyVipShopItem(string itemId) => _vip.BuyVipShopItem(itemId);
         public bool BuyDecoration(string id, string name, Dictionary<ResourceType, int> cost) => _store.BuyDecoration(id, name, cost);
         public bool OpenChest(string chestId) => _engagement.OpenChest(chestId);
         public void ClaimGift() => _engagement.ClaimRandomGift();
@@ -154,6 +158,20 @@ namespace EmpireConquest.Runtime
                 new() { Id = "guild_food_pack", Name = "Guild Food Pack", GuildTokenCost = 20, Reward = C(ResourceType.Food, 500) },
                 new() { Id = "guild_speed_boost", Name = "Guild Speed Booster", GuildTokenCost = 35, Reward = C(ResourceType.Gems, 10) },
                 new() { Id = "guild_dark_essence", Name = "Dark Essence", GuildTokenCost = 45, Reward = C(ResourceType.Mana, 350, ResourceType.Coal, 120) }
+            };
+
+            State.VipPackages = new List<VipPackageDefinition>
+            {
+                new() { Id = "vip_silver", Name = "VIP Silver", CostGems = 120, VipPoints = 140, BuildingBoostMultiplier = 1.2f, TrainingBoostMultiplier = 1.15f, HealingBoostMultiplier = 1.1f, InstantReward = C(ResourceType.Gold, 500, ResourceType.Food, 300) },
+                new() { Id = "vip_gold", Name = "VIP Gold", CostGems = 280, VipPoints = 320, BuildingBoostMultiplier = 1.35f, TrainingBoostMultiplier = 1.3f, HealingBoostMultiplier = 1.2f, InstantReward = C(ResourceType.Gold, 1200, ResourceType.Mana, 250, ResourceType.ClanTokens, 12) },
+                new() { Id = "vip_royal", Name = "VIP Royal", CostGems = 500, VipPoints = 560, BuildingBoostMultiplier = 1.5f, TrainingBoostMultiplier = 1.45f, HealingBoostMultiplier = 1.35f, InstantReward = C(ResourceType.Gold, 2200, ResourceType.GuildCoins, 30, ResourceType.EventTokens, 20) }
+            };
+
+            State.VipShop = new List<VipShopItem>
+            {
+                new() { Id = "vip_elixir_crate", Name = "Elixir Crate", RequiredVipLevel = 1, CostVipTokens = 20, Reward = C(ResourceType.Mana, 400, ResourceType.Coal, 100) },
+                new() { Id = "vip_builder_pass", Name = "Builder Pass", RequiredVipLevel = 2, CostVipTokens = 40, Reward = C(ResourceType.Gems, 35) },
+                new() { Id = "vip_war_bundle", Name = "War Bundle", RequiredVipLevel = 3, CostVipTokens = 60, Reward = C(ResourceType.Iron, 500, ResourceType.Brick, 180, ResourceType.Honor, 30) }
             };
 
             State.EnemyBases = new List<EnemyBaseDefinition>

@@ -229,6 +229,85 @@ namespace EmpireConquest.UnityRuntime
         public bool BuyGuildShopItem(string id) { var i = _s.GuildShop.FirstOrDefault(x => x.Id == id); if (i == null || !_r.Spend(new Dictionary<ResourceType, int> { [ResourceType.GuildCoins] = i.GuildTokenCost })) return false; _r.Add(i.Reward); return true; }
     }
 
+    public class VipService
+    {
+        private readonly GameState _s;
+        private readonly ResourceService _r;
+
+        public VipService(GameState s, ResourceService r)
+        {
+            _s = s;
+            _r = r;
+        }
+
+        public bool BuyVipPackage(string packageId)
+        {
+            var p = _s.VipPackages.FirstOrDefault(x => x.Id == packageId);
+            if (p == null) return false;
+            if (!_r.Spend(new Dictionary<ResourceType, int> { [ResourceType.Gems] = p.CostGems })) return false;
+            _s.Player.ActiveVipPackageId = p.Id;
+            AddVipPoints(p.VipPoints);
+            if (p.InstantReward.Count > 0) _r.Add(p.InstantReward);
+            ApplyPackageBoosts(p);
+            _s.VipTokens += Mathf.Max(5, p.VipPoints / 10);
+            return true;
+        }
+
+        public bool BuyVipShopItem(string itemId)
+        {
+            var item = _s.VipShop.FirstOrDefault(x => x.Id == itemId);
+            if (item == null) return false;
+            if (_s.Player.VipLevel < item.RequiredVipLevel) return false;
+            if (_s.VipTokens < item.CostVipTokens) return false;
+            _s.VipTokens -= item.CostVipTokens;
+            _r.Add(item.Reward);
+            return true;
+        }
+
+        public void GrantVipTokens(int amount)
+        {
+            if (amount <= 0) return;
+            _s.VipTokens += amount;
+        }
+
+        private void AddVipPoints(int points)
+        {
+            if (points <= 0) return;
+            _s.Player.VipPoints += points;
+            while (_s.Player.VipLevel < _s.Player.MaxVipLevel)
+            {
+                var need = NextLevelPoints(_s.Player.VipLevel);
+                if (_s.Player.VipPoints < need) break;
+                _s.Player.VipPoints -= need;
+                _s.Player.VipLevel++;
+                _s.Player.TownHallPower += 20;
+                _s.Player.MaxXp += 20;
+            }
+        }
+
+        private void ApplyPackageBoosts(VipPackageDefinition p)
+        {
+            AddOrReplaceBoost(BoostType.Building, p.BuildingBoostMultiplier, 3600f);
+            AddOrReplaceBoost(BoostType.Training, p.TrainingBoostMultiplier, 3600f);
+            AddOrReplaceBoost(BoostType.Healing, p.HealingBoostMultiplier, 3600f);
+        }
+
+        private void AddOrReplaceBoost(BoostType type, float multiplier, float seconds)
+        {
+            if (multiplier <= 1f) return;
+            var existing = _s.ActiveBoosts.FirstOrDefault(x => x.Type == type);
+            if (existing == null)
+            {
+                _s.ActiveBoosts.Add(new ActiveBoost { Type = type, Multiplier = multiplier, RemainingSeconds = seconds });
+                return;
+            }
+            existing.Multiplier = Mathf.Max(existing.Multiplier, multiplier);
+            existing.RemainingSeconds = Mathf.Max(existing.RemainingSeconds, seconds);
+        }
+
+        private static int NextLevelPoints(int vipLevel) => 120 + (vipLevel * 80);
+    }
+
     public class CombatService
     {
         private readonly UnitService _u; private readonly HeroService _h; public CombatService(UnitService u, HeroService h) { _u = u; _h = h; }

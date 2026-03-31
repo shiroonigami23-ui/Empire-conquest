@@ -60,6 +60,11 @@ namespace EmpireConquest.UI
             CreateButton(panel, "Clan War Battle", new Vector2(0, y), () => Set(runtime.ClanWarBattle(1600), "Clan War Battle"));
             y -= 50;
 
+            CreateButton(panel, "Buy VIP Silver", new Vector2(0, y), () => Set(runtime.BuyVipPackage("vip_silver"), "VIP Silver"));
+            y -= 42;
+            CreateButton(panel, "Buy VIP Shop Item", new Vector2(0, y), () => Set(runtime.BuyVipShopItem("vip_elixir_crate"), "VIP Shop"));
+            y -= 50;
+
             _searchInput = CreateInput(panel, "Search player id/name", new Vector2(0, y));
             y -= 42;
             CreateButton(panel, "Search + Raid Offline", new Vector2(0, y), RaidSearchedPlayer);

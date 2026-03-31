@@ -27,7 +27,7 @@ namespace EmpireConquest.Gameplay
 
         private void DrawLeftPanel()
         {
-            GUI.Box(new Rect(10, 10, 460, 470), "Empire Systems");
+            GUI.Box(new Rect(10, 10, 460, 520), "Empire Systems");
             var y = 40;
 
             if (GUI.Button(new Rect(20, y, 145, 26), "Laboratory"))
@@ -194,7 +194,21 @@ namespace EmpireConquest.Gameplay
                 _message = runtime.CancelUpgrade() ? "Upgrade canceled, 80% refunded." : "No active upgrade.";
             }
 
-            GUI.Label(new Rect(20, 446, 430, 24), _message);
+            y += 34;
+            if (GUI.Button(new Rect(20, y, 145, 26), "VIP Silver"))
+            {
+                _message = runtime.BuyVipPackage("vip_silver") ? "VIP Silver activated." : "VIP purchase failed.";
+            }
+            if (GUI.Button(new Rect(172, y, 145, 26), "VIP Gold"))
+            {
+                _message = runtime.BuyVipPackage("vip_gold") ? "VIP Gold activated." : "VIP purchase failed.";
+            }
+            if (GUI.Button(new Rect(324, y, 135, 26), "VIP Shop"))
+            {
+                _message = runtime.BuyVipShopItem("vip_elixir_crate") ? "VIP shop reward claimed." : "VIP shop locked/insufficient tokens.";
+            }
+
+            GUI.Label(new Rect(20, 496, 430, 24), _message);
         }
 
         private void DrawRightPanel()
@@ -206,6 +220,8 @@ namespace EmpireConquest.Gameplay
             GUI.Label(new Rect(Screen.width - 410, y, 390, 22), $"Player: {state.Player.Name} | TH Power: {state.Player.TownHallPower} | Builders: {state.Player.BuildersOwned} (Lv {state.Player.BuilderLevel})");
             y += 24;
             GUI.Label(new Rect(Screen.width - 410, y, 390, 22), $"TownHall Lv: {state.Player.TownHallLevel} | Land Lv: {state.Player.LandExpansionLevel}/{state.Player.MaxLandExpansionLevel}");
+            y += 24;
+            GUI.Label(new Rect(Screen.width - 410, y, 390, 22), $"VIP Lv: {state.Player.VipLevel} | VIP Points: {state.Player.VipPoints} | VIP Tokens: {state.VipTokens}");
             y += 24;
             GUI.Label(new Rect(Screen.width - 410, y, 390, 22), $"Profile: {state.Profile.Tag} | Motto: {state.Profile.Motto}");
             y += 24;
