@@ -1,0 +1,8 @@
+Unity/EmpireConquestUnity/Library/
+Unity/EmpireConquestUnity/Logs/
+Unity/EmpireConquestUnity/Temp/
+Unity/EmpireConquestUnity/Obj/
+Unity/EmpireConquestUnity/UserSettings/
+Unity/Build/
+Unity/*.log
+*.jks
